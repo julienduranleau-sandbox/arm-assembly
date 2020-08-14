@@ -1,100 +1,48 @@
-.data
-    log_top: .asciz "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃ Reg | Decimal     | Hex         ┃\n┃━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┃\n" 
-    log_str: .asciz "┃ r%-2.1d | %-11.1d | #%-11.1X┃\n"
-    log_bot: .asciz "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" 
+.include "includes/int_to_binary_str_truncated.s"
 
-.text
-.global main
 .extern printf
 
+.data
+log_top1: .asciz "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n" 
+log_top2: .asciz "┃ Reg | Decimal     | Hex          | Binary (truncated)  ┃\n" 
+log_top3: .asciz "┃━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┃\n" 
+log_str:  .asciz "┃ r%-2.1d | %-11.1d | #%-11.1X | %s ┃\n"
+log_bot:  .asciz "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n" 
+
+.text
 log:
-    push    {ip, lr}
+    push    {r0-r10, lr}
 
-    push    {r0,r1,r2,r3}
-    push    {r6,r8,r9,r10}
-    mov     r6, r0
-    mov     r8, r1
-    mov     r9, r2
-    mov     r10, r3
-
-    @ Cap
-    ldr     r0, =log_top
+    @ Top box cap
+    ldr     r0, =log_top1
+    bl      printf
+    ldr     r0, =log_top2
+    bl      printf
+    ldr     r0, =log_top3
     bl      printf
 
-    @ R0
-    ldr     r0, =log_str
-    mov     r1, #0
-    mov     r2, r6
-    mov     r3, r6
-    bl      printf
-    @ R1
-    ldr     r0, =log_str
-    mov     r1, #1
-    mov     r2, r8
-    mov     r3, r8
-    bl      printf
-    @ R2
-    ldr     r0, =log_str
-    mov     r1, #2
-    mov     r2, r9
-    mov     r3, r9
-    bl      printf
-    @ R3
-    ldr     r0, =log_str
-    mov     r1, #3
-    mov     r2, r10
-    mov     r3, r10
-    bl      printf
+    mov     r10, #0     @ counter 0..=10
 
-    pop     {r6,r8,r9,r10}
+log_loop:
+    ldr     r5, [sp, r10, lsl #2] @ Value in stack for register `n` (r2 = sp[r10])
+    mov     r0, r5
+    bl      int_to_binary_str_truncated
+    mov     r4, r0
 
-    @ R4
     ldr     r0, =log_str
-    mov     r1, #4
-    mov     r2, r4
-    mov     r3, r4
+    mov     r1, r10               @ Register n 
+    ldr     r2, [sp, r10, lsl #2] @ Value in stack for register `n` (r2 = sp[r10])
+    mov     r3, r2                @ Same value but displayed in hex
+    push    {r4}
     bl      printf
-    @ R5
-    ldr     r0, =log_str
-    mov     r1, #5
-    mov     r2, r5
-    mov     r3, r5
-    bl      printf
-    @ R6
-    ldr     r0, =log_str
-    mov     r1, #6
-    mov     r2, r6
-    mov     r3, r6
-    bl      printf
-    @ R7
-    ldr     r0, =log_str
-    mov     r1, #7
-    mov     r2, r7
-    mov     r3, r7
-    bl      printf
-    @ R8
-    ldr     r0, =log_str
-    mov     r1, #8
-    mov     r2, r8
-    mov     r3, r8
-    bl      printf
-    @ R9
-    ldr     r0, =log_str
-    mov     r1, #9
-    mov     r2, r9
-    mov     r3, r9
-    bl      printf
-    @ R10
-    ldr     r0, =log_str
-    mov     r1, #10
-    mov     r2, r10
-    mov     r3, r10
-    bl      printf
-    @ Cap
+    pop     {r4}
+    add     r10, #1     @ counter += 1
+    cmp     r10, #10    @ counter vs 10
+    ble     log_loop    @ loop if counter <= 10
+
+    @ Bottom box cap
     ldr     r0, =log_bot
     bl      printf
 
-    pop     {r0,r1,r2,r3}
-    pop     {ip, pc}
-    bx      lr
+    pop     {r0-r10, pc}
 
